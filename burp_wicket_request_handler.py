@@ -117,25 +117,26 @@ class BurpExtender(IBurpExtender, ISessionHandlingAction):
                     m_response_body = self._helper.bytesToString(m_response[m_response_info.getBodyOffset():])
                     re_interface = re.compile(r"(wicket:interface=:)(\d+)(:)")
                     re_identifier = re.compile(r"(\w)+_hf_0")
-                    re_interface_sub = re.compile(r"(:)(\d+)(:.+::)")
+                    re_interface_sub = re.compile(r"(:)(\d+)(:.+)")
                     result = re_interface.search(m_response_body)
                     iresult = re_identifier.search(m_response_body)
                     if result is None:
                         self._stderr.println("No interface found in macro response!")
-                        continue
-                    elif iresult is None:
-                        self._stderr.println("No identifier found in macro response!")
-                        continue
                     else:
                         # Using \\g<1>%s as \1%s is ambiguous due to the numeric result
                         replacement_value = "\\g<1>%s\\3" % result.group(2)
                         wi_value = re_interface_sub.sub(replacement_value, wicket_interface.getValue())
-            
+                        
                         wicket_interface = self._helper.buildParameter(
                             wicket_interface.getName(),
                             wi_value,
                             wicket_interface.getType())
-                        
+
+                        self._stdout.println("Found wicket interface: %s" % wi_value)
+                        updated_request = self._helper.updateParameter(updated_request, wicket_interface)
+                    if  iresult is None:
+                        self._stderr.println("No identifier found in macro response!")
+                    else:
                         i_name = iresult.group(0)
 
                         identifier = self._helper.buildParameter(
@@ -143,15 +144,8 @@ class BurpExtender(IBurpExtender, ISessionHandlingAction):
                             "",
                             p.getType())
                         
-                        self._stdout.println("Found wicket interface: %s" % wi_value)
+                        updated_request = self._helper.addParameter(updated_request, identifier)
                         self._stdout.println("Found identifier: %s" % i_name)
                            
-        if wicket_interface is None or identifier is None:
-            self._stderr.println("No new values found in Macro response!")
-        else:
-            #self._stdout.println("Updating request!")
-            updated_request = self._helper.updateParameter(updated_request, wicket_interface)
-            updated_request = self._helper.addParameter(updated_request, identifier)
-            #self._stdout.println(self._helper.bytesToString(updated_request))
-            currentRequest.setRequest(updated_request)
-
+        #self._stdout.println(self._helper.bytesToString(updated_request))
+        currentRequest.setRequest(updated_request)
