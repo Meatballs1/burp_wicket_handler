@@ -44,8 +44,8 @@ class BurpExtender(IBurpExtender, ISessionHandlingAction):
     # implement ISessionHandlingAction
     #
 
-    def processHttpMessage(self):
-        return "UpdateInterface"
+    def getActionName(self):
+        return "UpdateWicketInterface"
 
     #
      # This method is invoked when the session handling action should be
