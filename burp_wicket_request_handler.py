@@ -3,7 +3,7 @@
 # Add a new Rule in Options/Sessions
 # Set the scope (e.g. Repeater/Scanner/Intruder)
 # Add the Macro to the rule and tick 'After running the macro, invoke a Burp extension action handler'
-# Select the WicketRequestUpdater
+# Select the WicketRequestHandler
 #
 
 from burp import IBurpExtender
@@ -12,6 +12,7 @@ from burp import IProxyListener
 from burp import IScannerListener
 from burp import IExtensionStateListener
 from burp import ISessionHandlingAction
+from burp import IParameter
 from java.io import PrintWriter
 import re
 
@@ -27,7 +28,7 @@ class BurpExtender(IBurpExtender, ISessionHandlingAction):
         self._callbacks = callbacks
         
         # set our extension name
-        callbacks.setExtensionName("WicketRequestUpdater")
+        callbacks.setExtensionName("WicketRequestHandler")
 
         callbacks.registerSessionHandlingAction(self)
         
@@ -55,7 +56,7 @@ class BurpExtender(IBurpExtender, ISessionHandlingAction):
      # The action can query this object to obtain details about the base
      # request. It can issue additional requests of its own if necessary, and
      # can use the setter methods on this object to update the base request.
-     # @param macroItems If the action is invoked following execution of a
+     # @param IHttpRequestResponse[] macroItems If the action is invoked following execution of a
      # macro, this parameter contains the result of executing the macro.
      # Otherwise, it is
      # <code>null</code>. Actions can use the details of the macro items to
@@ -85,7 +86,12 @@ class BurpExtender(IBurpExtender, ISessionHandlingAction):
             elif "_hf_0" in p.getName():
                 identifier = p
 
-        # Wicket Interface needs updating!
+        updated_request = currentRequest.getRequest()
+        # Remove the identifier if it exists
+        if identifier is not None:
+            updated_request = self._helper.removeParameter(updated_request, identifier)
+            
+        # Wicket Interface needs updating
         if wicket_interface is not None:
             for m in macroItems:
                 m_response = m.getResponse()
@@ -121,7 +127,7 @@ class BurpExtender(IBurpExtender, ISessionHandlingAction):
                         identifier = self._helper.buildParameter(
                             i_name,
                             "",
-                            wicket_interface.getType())
+                            p.getType())
                         
                         self._stdout.println("Found wicket interface: %s" % wi_value)
                         self._stdout.println("Found identifier: %s" % i_name)
@@ -129,12 +135,9 @@ class BurpExtender(IBurpExtender, ISessionHandlingAction):
         if wicket_interface is None or identifier is None:
             self._stderr.println("No new values found in Macro response!")
         else:
-            self._stderr.println("Updating request!")
-            updated_request = self._helper.updateParameter(currentRequest.getRequest(), wicket_interface)
-            updated_request = self._helper.updateParameter(updated_request, identifier)
+            #self._stdout.println("Updating request!")
+            updated_request = self._helper.updateParameter(updated_request, wicket_interface)
+            updated_request = self._helper.addParameter(updated_request, identifier)
             #self._stdout.println(self._helper.bytesToString(updated_request))
             currentRequest.setRequest(updated_request)
-        
 
-    
-      
