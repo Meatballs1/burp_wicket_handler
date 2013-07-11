@@ -115,18 +115,14 @@ class BurpExtender(IBurpExtender, ISessionHandlingAction):
                 else:
                     m_response_info = self._helper.analyzeResponse(m_response)
                     m_response_body = self._helper.bytesToString(m_response[m_response_info.getBodyOffset():])
-                    re_interface = re.compile(r"(wicket:interface=:)(\d+)(:)")
+                    re_interface = re.compile(r"(action=\"\?wicket:interface=)([\w:]+)(\")")
                     re_identifier = re.compile(r"(\w)+_hf_0")
-                    re_interface_sub = re.compile(r"(:)(\d+)(:.+)")
                     result = re_interface.search(m_response_body)
                     iresult = re_identifier.search(m_response_body)
                     if result is None:
                         self._stderr.println("No interface found in macro response!")
                     else:
-                        # Using \\g<1>%s as \1%s is ambiguous due to the numeric result
-                        replacement_value = "\\g<1>%s\\3" % result.group(2)
-                        wi_value = re_interface_sub.sub(replacement_value, wicket_interface.getValue())
-                        
+                        wi_value = result.group(2)
                         wicket_interface = self._helper.buildParameter(
                             wicket_interface.getName(),
                             wi_value,
@@ -138,7 +134,6 @@ class BurpExtender(IBurpExtender, ISessionHandlingAction):
                         self._stderr.println("No identifier found in macro response!")
                     else:
                         i_name = iresult.group(0)
-
                         identifier = self._helper.buildParameter(
                             i_name,
                             "",
